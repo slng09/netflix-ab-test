@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artwork Personalization Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: an experiment readout. Verdict first, then scorecard, then evidence (novelty, segments), then checks. */
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --fg: #17191f; --muted: #5d6370; --line: #dde0e6;
+  --trt: #3346c8; --trt-soft: rgba(51,70,200,.14); --ctrl: #8c919c;
+  --new: #c2531f; --new-soft: rgba(194,83,31,.14);
+  --good: #1f7a4d; --good-bg: #e2f2e9; --warn: #9a6400; --warn-bg: #fbf0d9; --bad: #b42318;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12141a; --surface: #1b1e26; --fg: #e8eaf0; --muted: #9aa0ad; --line: #2e3240;
+  --trt: #8796ff; --trt-soft: rgba(135,150,255,.18); --ctrl: #7d8392;
+  --new: #f08a55; --new-soft: rgba(240,138,85,.18);
+  --good: #5cc98f; --good-bg: rgba(92,201,143,.14); --warn: #e9b450; --warn-bg: rgba(233,180,80,.14); --bad: #ff7b6e;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12141a; --surface: #1b1e26; --fg: #e8eaf0; --muted: #9aa0ad; --line: #2e3240;
+  --trt: #8796ff; --trt-soft: rgba(135,150,255,.18); --ctrl: #7d8392;
+  --new: #f08a55; --new-soft: rgba(240,138,85,.18);
+  --good: #5cc98f; --good-bg: rgba(92,201,143,.14); --warn: #e9b450; --warn-bg: rgba(233,180,80,.14); --bad: #ff7b6e;
+  color-scheme: dark; }
+
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 56px; display: grid; gap: 28px; }
+h1, h2 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -.005em; }
+h1 { font-size: clamp(28px, 4.6vw, 40px); font-weight: 700; line-height: 1.1; }
+h2 { font-size: 21px; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font: 500 12px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+section { display: grid; gap: 14px; min-width: 0; }
+.sec-head { display: grid; gap: 4px; }
+.sec-head p { color: var(--muted); max-width: 70ch; }
+
+/* header */
+header { display: grid; gap: 14px; }
+.head-row { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-end; justify-content: space-between; }
+.head-row > div { min-width: 0; display: grid; gap: 8px; }
+.sim { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--warn); background: var(--warn-bg); padding: 6px 10px; border-radius: 6px; width: fit-content; }
+.verdict { display: grid; gap: 4px; justify-items: end; }
+.pill { font: 700 15px/1 var(--f-display); letter-spacing: .08em; padding: 9px 14px; border-radius: 999px; }
+.pill.ship { color: var(--good); background: var(--good-bg); border: 1px solid var(--good); }
+.design { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+.design b { color: var(--fg); font-weight: 600; }
+
+/* kpis */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 6px; align-content: start; }
+.kpi .big { font: 600 30px/1.05 var(--f-display); font-variant-numeric: tabular-nums; }
+.kpi .big.trt { color: var(--trt); }
+.kpi .sub { font-size: 13px; color: var(--muted); }
+.kpi.lead { border-color: var(--trt); }
+
+/* scorecard */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px; }
+th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+th { font: 500 11px/1.2 var(--f-mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+td.r, th.r { text-align: right; }
+.group td { font: 600 12px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); background: var(--bg); padding-block: 8px; }
+.status { font: 600 12px/1 var(--f-body); padding: 5px 8px; border-radius: 5px; white-space: nowrap; }
+.status.good { color: var(--good); background: var(--good-bg); }
+.status.warn { color: var(--warn); background: var(--warn-bg); }
+.cibar { width: 240px; height: 22px; display: block; }
+
+/* charts */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+.callout { font-size: 14px; display: grid; gap: 8px; }
+.callout li { margin-bottom: 4px; }
+.callout ul { margin: 0; padding-left: 18px; }
+.ax { fill: var(--muted); font: 11px var(--f-mono); }
+.grid { stroke: var(--line); }
+.zero { stroke: var(--muted); stroke-width: 1; }
+
+/* checks */
+.checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.check { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; }
+.check .t { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 600; }
+.check p { font-size: 13px; color: var(--muted); }
+.notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; font-size: 14px; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+@media (max-width: 860px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .two, .checks, .notes { grid-template-columns: 1fr; }
+  .verdict { justify-items: start; }
+}
+@media (max-width: 420px) { .kpis { grid-template-columns: 1fr; } }
+</style>
+</head><body>
+
+<div class="wrap">
+  <header>
+    <div class="head-row">
+      <div>
+        <span class="eyebrow">Experiment readout · homepage</span>
+        <h1>Personalized artwork vs default artwork</h1>
+        <span class="sim">Simulated data for a portfolio project. Not real Netflix data or results.</span>
+      </div>
+      <div class="verdict">
+        <span class="eyebrow">Decision</span>
+        <span class="pill ship" id="decision">SHIP</span>
+      </div>
+    </div>
+    <div class="design">
+      <span><b>Unit</b> member account, 50/50</span>
+      <span><b>Duration</b> 28 days</span>
+      <span><b>Members</b> <span class="num" id="n-total"></span></span>
+      <span><b>Primary</b> streaming hours per member</span>
+      <span><b>α</b> 0.05, two-sided</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Metric scorecard</h2>
+      <p>Bars show the 95% confidence interval for the relative change; the dot is the point estimate. Guardrails are non-inferiority tests against a margin set before launch.</p>
+    </div>
+    <div class="table-wrap"><table id="score"></table></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Does the lift last?</h2>
+      <p>Daily lift in streaming hours, with 95% bands. Tenured members show a novelty effect that fades over the test. New members don't.</p>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="legend"><span><i style="background:var(--trt)"></i>Tenured members (80%)</span><span><i style="background:var(--new)"></i>New members, under 90 days (20%)</span></div>
+        <div class="chart" id="novelty"></div>
+      </div>
+      <div class="panel callout">
+        <span class="eyebrow">Weekly average lift</span>
+        <div class="table-wrap" style="border:0"><table id="weekly" style="min-width:0"></table></div>
+        <p class="muted" id="longrun-text"></p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Lift by segment</h2>
+      <p>CUPED-adjusted lift with 95% CIs. The dashed line is the overall effect. Only the tenure split was planned in advance; device and region cuts are exploratory.</p>
+    </div>
+    <div class="panel"><div class="chart" id="forest"></div></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Trust checks</h2></div>
+    <div class="checks" id="checks"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Recommendation and caveats</h2></div>
+    <div class="panel notes">
+      <div><span class="eyebrow">Recommend</span>
+        <ul id="recs"></ul></div>
+      <div><span class="eyebrow">Limitations</span>
+        <ul>
+          <li>All data is simulated with assumed effect sizes, so the numbers show the method, not a real Netflix outcome.</li>
+          <li>28 days is too short to measure retention. A long-term holdout of about 5% of members would settle it.</li>
+          <li>Members share household profiles, so randomising by account may leak effects between viewers.</li>
+          <li>Device and region cuts are exploratory: nine segments means more chances of a false positive.</li>
+        </ul></div>
+    </div>
+  </section>
+
+  <footer>Analysis: Python (pandas, SciPy, statsmodels). Methods: Welch t-test, delta method, bootstrap, CUPED, Holm correction, non-inferiority guardrails, sample-ratio-mismatch check.</footer>
+</div>
+
+<script>
+const R = {"sanity":{"control_n":39743,"treatment_n":40257,"srm_p":0.06917663401103533,"pre_period_p":0.5016206071792251},"primary":{"control":33.888364617668515,"treatment":34.95194892813672,"lift":0.03138494059738961,"ci_low":0.01734779849301169,"ci_high":0.04542208270176753,"p":8.56167286034463e-06,"se":0.007161807196111182,"boot_low":0.017920722948499158,"boot_high":0.045389436049671286,"metric":"Streaming hours / member (28d)"},"cuped":{"lift":0.027576268075209805,"ci_low":0.019351159965392287,"ci_high":0.03580137618502732,"p":4.988467272231959e-11,"se":0.004196483729498735,"abs_diff_hours":0.9345146273272817,"variance_reduction":0.6457927757326309,"theta":0.7417606033775259},"secondary":{"play_start_rate":{"control":0.6200558145603724,"treatment":0.6359474972131066,"abs_diff":0.015891682652734218,"lift":0.02562943896268699,"ci_low":0.02293279366022361,"ci_high":0.028326084265150344,"p":1.897320665447407e-77,"p_holm":3.794641330894814e-77},"cancellation":{"control":0.03198047454897718,"treatment":0.030205926919541944,"abs_diff":-0.0017745476294352344,"lift":-0.05548847083921682,"ci_low":-0.1307151185388303,"ci_high":0.019738176860396736,"p":0.14825301559544374,"p_holm":0.14825301559544374}},"guardrails":{"playback_error_rate":{"control":0.011835458196563578,"treatment":0.012213122718191777,"abs_diff":0.00037766452162819875,"lift":0.03190958181389658,"ci_low":0.002196426035085763,"ci_high":0.06162273759270746,"p":0.035301306660237806,"upper_95_one_sided":0.05684740898539857,"margin_rel":0.1,"pass":true},"homepage_load_ms":{"control":845.7078202450746,"treatment":860.9266115209775,"abs_diff":15.218791275902959,"ci_low_ms":12.250803394977222,"ci_high_ms":18.186779156828695,"upper_95_one_sided":17.709781104537058,"margin_ms":50,"pass":true}},"segments":[{"dimension":"tenure_segment","segment":"new","n":16014,"lift":0.06601148511816736,"ci_low":0.04705732730687783,"ci_high":0.08496564292945688,"p":8.726905994541741e-12},{"dimension":"tenure_segment","segment":"tenured","n":63986,"lift":0.02088742523613192,"ci_low":0.011844052024189533,"ci_high":0.029930798448074305,"p":5.982684832323532e-06},{"dimension":"primary_device","segment":"mobile","n":23997,"lift":0.019893043055270104,"ci_low":0.0050126315310166985,"ci_high":0.03477345457952351,"p":0.008786591460334274},{"dimension":"primary_device","segment":"tv","n":43974,"lift":0.03127817595826112,"ci_low":0.02027012941080902,"ci_high":0.04228622250571323,"p":2.5601674551814792e-08},{"dimension":"primary_device","segment":"web","n":12029,"lift":0.024844001846455514,"ci_low":0.004515966537720265,"ci_high":0.04517203715519076,"p":0.016601200072642916},{"dimension":"region","segment":"APAC","n":20083,"lift":0.03119592540894056,"ci_low":0.01477257005266961,"ci_high":0.04761928076521151,"p":0.0001968760855346332},{"dimension":"region","segment":"EMEA","n":24102,"lift":0.01968067927989711,"ci_low":0.004382154842741905,"ci_high":0.034979203717052314,"p":0.011687951568798588},{"dimension":"region","segment":"LATAM","n":11855,"lift":0.034588955739708556,"ci_low":0.013698129009727363,"ci_high":0.055479782469689744,"p":0.0011737916311188546},{"dimension":"region","segment":"NA","n":23960,"lift":0.02911120217279784,"ci_low":0.014248920425071615,"ci_high":0.04397348392052407,"p":0.0001234803661111396}],"daily_lift":[{"day":1,"tenure_segment":"new","lift":0.08537465223119756,"se":0.030313778279156767,"week":1},{"day":1,"tenure_segment":"tenured","lift":0.05557231354551706,"se":0.015413919018241195,"week":1},{"day":2,"tenure_segment":"new","lift":0.0012754307575717494,"se":0.028063753609422013,"week":1},{"day":2,"tenure_segment":"tenured","lift":0.05763287510554127,"se":0.01539179614022947,"week":1},{"day":3,"tenure_segment":"new","lift":0.0868343751346301,"se":0.030960254422117257,"week":1},{"day":3,"tenure_segment":"tenured","lift":0.06286687575650873,"se":0.015246734857476109,"week":1},{"day":4,"tenure_segment":"new","lift":0.08226949009451201,"se":0.031109695801825904,"week":1},{"day":4,"tenure_segment":"tenured","lift":0.04380234707663089,"se":0.014913461816559366,"week":1},{"day":5,"tenure_segment":"new","lift":0.01928162960346036,"se":0.029749616680722207,"week":1},{"day":5,"tenure_segment":"tenured","lift":0.03889435383639106,"se":0.015343016768348115,"week":1},{"day":6,"tenure_segment":"new","lift":0.033874228194780365,"se":0.02976345102558775,"week":1},{"day":6,"tenure_segment":"tenured","lift":0.02012166363166723,"se":0.014909178924730836,"week":1},{"day":7,"tenure_segment":"new","lift":0.08922677258749467,"se":0.03121766267832968,"week":1},{"day":7,"tenure_segment":"tenured","lift":0.031089328009350492,"se":0.015190076822979084,"week":1},{"day":8,"tenure_segment":"new","lift":0.08390354807330347,"se":0.03178380785482971,"week":2},{"day":8,"tenure_segment":"tenured","lift":0.05182228452174642,"se":0.015110725388683306,"week":2},{"day":9,"tenure_segment":"new","lift":0.03136705169896703,"se":0.030777990921599916,"week":2},{"day":9,"tenure_segment":"tenured","lift":0.03161500763256053,"se":0.014988976447430299,"week":2},{"day":10,"tenure_segment":"new","lift":0.0512648002461209,"se":0.030681077366687307,"week":2},{"day":10,"tenure_segment":"tenured","lift":0.046134652333253756,"se":0.015228161125390815,"week":2},{"day":11,"tenure_segment":"new","lift":0.049549549741784604,"se":0.030044758201002927,"week":2},{"day":11,"tenure_segment":"tenured","lift":0.032495266534887435,"se":0.015037991264521338,"week":2},{"day":12,"tenure_segment":"new","lift":0.09339407441186154,"se":0.03243845353551675,"week":2},{"day":12,"tenure_segment":"tenured","lift":0.01745673370516454,"se":0.015039550688044481,"week":2},{"day":13,"tenure_segment":"new","lift":0.10474599418900721,"se":0.03220353563696661,"week":2},{"day":13,"tenure_segment":"tenured","lift":0.0024031791562555416,"se":0.014702875028215748,"week":2},{"day":14,"tenure_segment":"new","lift":0.09829002907141882,"se":0.03303266949477007,"week":2},{"day":14,"tenure_segment":"tenured","lift":0.0037363987877485627,"se":0.014650662219160093,"week":2},{"day":15,"tenure_segment":"new","lift":0.05259181541726665,"se":0.030483758224240216,"week":3},{"day":15,"tenure_segment":"tenured","lift":0.007634064561274245,"se":0.01485006519796918,"week":3},{"day":16,"tenure_segment":"new","lift":0.04517615191871416,"se":0.030575594841505068,"week":3},{"day":16,"tenure_segment":"tenured","lift":0.021608884251714366,"se":0.014902187610953228,"week":3},{"day":17,"tenure_segment":"new","lift":0.020600505687559334,"se":0.02932424440115407,"week":3},{"day":17,"tenure_segment":"tenured","lift":0.022712866929543774,"se":0.01491816697483039,"week":3},{"day":18,"tenure_segment":"new","lift":0.038116945738186914,"se":0.030766982525258654,"week":3},{"day":18,"tenure_segment":"tenured","lift":0.00377225620693733,"se":0.01500073260803338,"week":3},{"day":19,"tenure_segment":"new","lift":0.008997814222813094,"se":0.03100021584103317,"week":3},{"day":19,"tenure_segment":"tenured","lift":0.04089731610457825,"se":0.015103538939596088,"week":3},{"day":20,"tenure_segment":"new","lift":0.08167827661759919,"se":0.03278564024530779,"week":3},{"day":20,"tenure_segment":"tenured","lift":0.01715513638370525,"se":0.01517552260563927,"week":3},{"day":21,"tenure_segment":"new","lift":0.06345509348611555,"se":0.03380367712887702,"week":3},{"day":21,"tenure_segment":"tenured","lift":0.017097093908849503,"se":0.014789438645537414,"week":3},{"day":22,"tenure_segment":"new","lift":0.0309541212233011,"se":0.03033528112833306,"week":4},{"day":22,"tenure_segment":"tenured","lift":-0.007955325846209726,"se":0.01459559604526728,"week":4},{"day":23,"tenure_segment":"new","lift":0.07896107482741077,"se":0.0319592924444391,"week":4},{"day":23,"tenure_segment":"tenured","lift":0.007219230396105614,"se":0.01488367627098684,"week":4},{"day":24,"tenure_segment":"new","lift":0.040859252554596326,"se":0.03136700282588033,"week":4},{"day":24,"tenure_segment":"tenured","lift":-0.012628615846692393,"se":0.014359946077009043,"week":4},{"day":25,"tenure_segment":"new","lift":0.0883500484391615,"se":0.032987284922170665,"week":4},{"day":25,"tenure_segment":"tenured","lift":0.028783464796953817,"se":0.015191333523974483,"week":4},{"day":26,"tenure_segment":"new","lift":0.008908534936869827,"se":0.030458186804089786,"week":4},{"day":26,"tenure_segment":"tenured","lift":0.030939760662147764,"se":0.01491121919604862,"week":4},{"day":27,"tenure_segment":"new","lift":0.08108078257929918,"se":0.03195317198514575,"week":4},{"day":27,"tenure_segment":"tenured","lift":0.03688894230704154,"se":0.01506728428619269,"week":4},{"day":28,"tenure_segment":"new","lift":0.042668784233820034,"se":0.03211769815377677,"week":4},{"day":28,"tenure_segment":"tenured","lift":-0.0022965092485934813,"se":0.014839315736420156,"week":4}],"novelty":{"weekly":[{"week":1,"new":0.05687665408623526,"tenured":0.044282822423086676},{"week":2,"new":0.0732164353474948,"tenured":0.02652336038165954},{"week":3,"new":0.04437380044117927,"tenured":0.018696802620943247},{"week":4,"new":0.05311179982777982,"tenured":0.011564421031536163}],"long_run_estimate":0.019881167582074238},"decision":"SHIP"};
+const $ = id => document.getElementById(id);
+const pct = (x, d = 2) => (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(d) + "%";
+const fmtP = p => p < 0.0001 ? "<0.0001" : p.toFixed(p < 0.01 ? 4 : 3);
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+
+$("n-total").textContent = (R.sanity.control_n + R.sanity.treatment_n).toLocaleString();
+$("decision").textContent = R.decision;
+
+// ---- KPIs
+const c = R.cuped, sec = R.secondary, g = R.guardrails;
+const kpis = [
+  { lab: "Streaming hours, 28-day lift", big: pct(c.lift), cls: "trt lead", sub: `95% CI ${pct(c.ci_low)} to ${pct(c.ci_high)} · CUPED-adjusted` },
+  { lab: "Steady-state estimate", big: pct(R.novelty.long_run_estimate), sub: "Week-4 lift, weighted by tenure mix. Use this for forecasts." },
+  { lab: "Play-start rate", big: "+" + (sec.play_start_rate.abs_diff * 100).toFixed(2) + " pp", sub: `${(sec.play_start_rate.control*100).toFixed(1)}% → ${(sec.play_start_rate.treatment*100).toFixed(1)}% of homepage sessions` },
+  { lab: "28-day cancellation", big: pct(sec.cancellation.lift, 1), sub: `Inconclusive · CI ${pct(sec.cancellation.ci_low,1)} to ${pct(sec.cancellation.ci_high,1)}` },
+];
+$("kpis").innerHTML = kpis.map(k => `<div class="kpi ${k.cls?.includes('lead')?'lead':''}"><span class="eyebrow">${k.lab}</span><span class="big ${k.cls?.includes('trt')?'trt':''}">${k.big}</span><span class="sub">${k.sub}</span></div>`).join("");
+
+// ---- Scorecard
+function ciBar(lo, hi, est, min = -0.15, max = 0.15, margin) {
+  const W = 240, H = 22, x = v => 6 + (Math.max(min, Math.min(max, v)) - min) / (max - min) * (W - 12);
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "cibar", role: "img", "aria-label": `CI ${pct(lo)} to ${pct(hi)}` });
+  s.append(el("line", { x1: x(0), x2: x(0), y1: 2, y2: H - 2, class: "zero" }));
+  if (margin != null) s.append(el("line", { x1: x(margin), x2: x(margin), y1: 2, y2: H - 2, stroke: "var(--bad)", "stroke-dasharray": "3 2" }));
+  s.append(el("rect", { x: x(lo), y: 8, width: Math.max(2, x(hi) - x(lo)), height: 6, rx: 3, fill: "var(--trt-soft)", stroke: "var(--trt)" }));
+  s.append(el("circle", { cx: x(est), cy: 11, r: 4, fill: "var(--trt)" }));
+  return s.outerHTML;
+}
+const P = R.primary, err = g.playback_error_rate, load = g.homepage_load_ms;
+const rows = [
+  ["group", "Primary"],
+  ["Streaming hours / member (CUPED)", P.control.toFixed(2) + " h", P.treatment.toFixed(2) + " h", pct(c.lift), ciBar(c.ci_low, c.ci_high, c.lift), fmtP(c.p), ["good", "Significant win"]],
+  ["Streaming hours / member (unadjusted)", P.control.toFixed(2) + " h", P.treatment.toFixed(2) + " h", pct(P.lift), ciBar(P.ci_low, P.ci_high, P.lift), fmtP(P.p), ["good", "Agrees"]],
+  ["group", "Secondary · Holm-corrected"],
+  ["Play-start rate", (sec.play_start_rate.control*100).toFixed(2) + "%", (sec.play_start_rate.treatment*100).toFixed(2) + "%", pct(sec.play_start_rate.lift), ciBar(sec.play_start_rate.ci_low, sec.play_start_rate.ci_high, sec.play_start_rate.lift), fmtP(sec.play_start_rate.p_holm), ["good", "Significant win"]],
+  ["28-day cancellation", (sec.cancellation.control*100).toFixed(2) + "%", (sec.cancellation.treatment*100).toFixed(2) + "%", pct(sec.cancellation.lift), ciBar(sec.cancellation.ci_low, sec.cancellation.ci_high, sec.cancellation.lift), fmtP(sec.cancellation.p_holm), ["warn", "Inconclusive"]],
+  ["group", "Guardrails · non-inferiority"],
+  ["Playback error rate (margin +10%)", (err.control*100).toFixed(3) + "%", (err.treatment*100).toFixed(3) + "%", pct(err.lift), ciBar(err.ci_low, err.ci_high, err.lift, -0.15, 0.15, err.margin_rel), fmtP(err.p), ["good", "Within margin"]],
+  ["Homepage load time (margin +50 ms)", load.control.toFixed(0) + " ms", load.treatment.toFixed(0) + " ms", "+" + load.abs_diff.toFixed(1) + " ms", ciBar(load.ci_low_ms/load.control, load.ci_high_ms/load.control, load.abs_diff/load.control, -0.15, 0.15, load.margin_ms/load.control), "<0.0001", ["warn", "Slower, within margin"]],
+];
+$("score").innerHTML = `<thead><tr><th>Metric</th><th class="r">Control</th><th class="r">Treatment</th><th class="r">Change</th><th>95% CI (−15% to +15%)</th><th class="r">p</th><th>Status</th></tr></thead><tbody>` +
+  rows.map(r => r[0] === "group" ? `<tr class="group"><td colspan="7">${r[1]}</td></tr>` :
+    `<tr><td>${r[0]}</td><td class="r num">${r[1]}</td><td class="r num">${r[2]}</td><td class="r num">${r[3]}</td><td>${r[4]}</td><td class="r num">${r[5]}</td><td><span class="status ${r[6][0]}">${r[6][1]}</span></td></tr>`).join("") + "</tbody>";
+
+// ---- Novelty chart
+(function () {
+  const W = 640, H = 320, m = { l: 44, r: 14, t: 12, b: 34 };
+  const d = R.daily_lift, days = 28;
+  const ymin = -0.06, ymax = 0.16;
+  const x = v => m.l + (v - 1) / (days - 1) * (W - m.l - m.r);
+  const y = v => m.t + (ymax - Math.max(ymin, Math.min(ymax, v))) / (ymax - ymin) * (H - m.t - m.b);
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Daily lift by tenure" });
+  for (let v = -0.05; v <= 0.151; v += 0.05) {
+    s.append(el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: Math.abs(v) < 1e-9 ? "zero" : "grid" }));
+    s.append(el("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end", class: "ax" }, (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(Math.round(v * 100)) + "%"));
+  }
+  [1, 7, 14, 21, 28].forEach(v => s.append(el("text", { x: x(v), y: H - 12, "text-anchor": "middle", class: "ax" }, "day " + v)));
+  [8, 15, 22].forEach(v => s.append(el("line", { x1: x(v - .5), x2: x(v - .5), y1: m.t, y2: H - m.b, class: "grid", "stroke-dasharray": "2 3" })));
+  [["new", "var(--new)", "var(--new-soft)"], ["tenured", "var(--trt)", "var(--trt-soft)"]].forEach(([seg, col, soft]) => {
+    const pts = d.filter(r => r.tenure_segment === seg).sort((a, b) => a.day - b.day);
+    const up = pts.map(r => `${x(r.day)},${y(r.lift + 1.96 * r.se)}`), lo = pts.map(r => `${x(r.day)},${y(r.lift - 1.96 * r.se)}`).reverse();
+    s.append(el("polygon", { points: up.concat(lo).join(" "), fill: soft, stroke: "none" }));
+    s.append(el("polyline", { points: pts.map(r => `${x(r.day)},${y(r.lift)}`).join(" "), fill: "none", stroke: col, "stroke-width": 2, "stroke-linejoin": "round" }));
+    pts.forEach(r => s.append(el("circle", { cx: x(r.day), cy: y(r.lift), r: 2.5, fill: col })));
+  });
+  $("novelty").append(s);
+  const wk = R.novelty.weekly;
+  $("weekly").innerHTML = `<thead><tr><th>Week</th><th class="r">Tenured</th><th class="r">New</th></tr></thead><tbody>` +
+    wk.map(w => `<tr><td>Week ${w.week}</td><td class="r num">${pct(w.tenured)}</td><td class="r num">${pct(w.new)}</td></tr>`).join("") + "</tbody>";
+  $("longrun-text").textContent = `Tenured lift falls from ${pct(wk[0].tenured)} in week 1 to ${pct(wk[3].tenured)} in week 4. Weighting week 4 by the tenure mix gives a steady-state estimate of ${pct(R.novelty.long_run_estimate)}, lower than the 28-day average of ${pct(c.lift)}.`;
+})();
+
+// ---- Forest plot
+(function () {
+  const seg = R.segments, W = 980, rowH = 30, m = { l: 170, r: 70, t: 8, b: 30 };
+  const H = m.t + m.b + seg.length * rowH, xmin = -0.01, xmax = 0.10;
+  const x = v => m.l + (v - xmin) / (xmax - xmin) * (W - m.l - m.r);
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Lift by segment" });
+  for (let v = 0; v <= 0.1001; v += 0.02) {
+    s.append(el("line", { x1: x(v), x2: x(v), y1: m.t, y2: H - m.b, class: v === 0 ? "zero" : "grid" }));
+    s.append(el("text", { x: x(v), y: H - 10, "text-anchor": "middle", class: "ax" }, (v ? "+" : "") + Math.round(v * 100) + "%"));
+  }
+  s.append(el("line", { x1: x(c.lift), x2: x(c.lift), y1: m.t, y2: H - m.b, stroke: "var(--trt)", "stroke-dasharray": "4 3" }));
+  const names = { tenure_segment: "Tenure", primary_device: "Device", region: "Region" };
+  const label = { new: "New", tenured: "Tenured", tv: "TV", mobile: "Mobile", web: "Web", NA: "N. America", APAC: "APAC", EMEA: "EMEA", LATAM: "LATAM" };
+  seg.forEach((r, i) => {
+    const cy = m.t + i * rowH + rowH / 2, col = r.dimension === "tenure_segment" && r.segment === "new" ? "var(--new)" : "var(--trt)";
+    if (i > 0 && seg[i - 1].dimension !== r.dimension) s.append(el("line", { x1: 0, x2: W, y1: cy - rowH / 2, y2: cy - rowH / 2, class: "grid" }));
+    s.append(el("text", { x: 0, y: cy + 4, class: "ax", fill: "var(--muted)" }, names[r.dimension]));
+    s.append(el("text", { x: 58, y: cy + 4, style: "font: 13px var(--f-body)", fill: "var(--fg)" }, label[r.segment] || r.segment));
+    s.append(el("line", { x1: x(r.ci_low), x2: x(r.ci_high), y1: cy, y2: cy, stroke: col, "stroke-width": 2 }));
+    s.append(el("circle", { cx: x(r.lift), cy, r: 4.5, fill: col }));
+    s.append(el("text", { x: W - 2, y: cy + 4, "text-anchor": "end", class: "ax" }, pct(r.lift, 1)));
+  });
+  $("forest").append(s);
+})();
+
+// ---- Checks
+const S = R.sanity;
+const checks = [
+  ["Sample ratio", "Pass", `${S.control_n.toLocaleString()} vs ${S.treatment_n.toLocaleString()} members. Chi-square p = ${S.srm_p.toFixed(3)}, above the 0.001 alarm threshold.`],
+  ["Pre-period balance", "Pass", `Viewing in the 28 days before the test didn't differ between arms (p = ${S.pre_period_p.toFixed(2)}).`],
+  ["CUPED variance reduction", Math.round(c.variance_reduction * 100) + "%", `Pre-period viewing (r ≈ 0.80) removes ${Math.round(c.variance_reduction*100)}% of variance, giving a CI ${Math.round((1 - c.se / P.se) * 100)}% narrower than the unadjusted test.`],
+];
+$("checks").innerHTML = checks.map(([t, v, p]) => `<div class="check"><div class="t"><span>${t}</span><span class="status good">${v}</span></div><p>${p}</p></div>`).join("");
+
+$("recs").innerHTML = [
+  `Ship personalized artwork. Streaming hours rose ${pct(c.lift)} over 28 days, and play starts rose with them.`,
+  `Plan around the ${pct(R.novelty.long_run_estimate)} steady-state figure, not the 28-day average, because part of the early lift was novelty.`,
+  `Prioritise new members, whose lift is the largest and doesn't fade.`,
+  `Ask engineering to recover the +${load.abs_diff.toFixed(0)} ms load time, for example by pre-fetching artwork.`,
+  `The playback-error blip (p ≈ ${err.p.toFixed(2)}) is a chance result inside its margin. Artwork doesn't touch the video player.`,
+].map(t => `<li>${t}</li>`).join("");
+</script>
+
+</body></html>
