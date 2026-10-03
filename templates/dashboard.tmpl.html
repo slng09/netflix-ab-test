@@ -1,0 +1,494 @@
+<title>Artwork Personalization Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: interactive experiment readout. Sticky filter bar drives every number below it:
+   verdict + KPIs, scorecard, lift over time, segments, then a sample-size calculator. */
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --raised: #eef0f4; --fg: #17191f; --muted: #5d6370; --line: #dde0e6;
+  --trt: #3346c8; --trt-soft: rgba(51,70,200,.14); --ref: #9aa0ad;
+  --good: #1f7a4d; --good-bg: #e2f2e9; --warn: #9a6400; --warn-bg: #fbf0d9; --bad: #b42318; --bad-bg: #fbe4e1;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12141a; --surface: #1b1e26; --raised: #242833; --fg: #e8eaf0; --muted: #9aa0ad; --line: #2e3240;
+  --trt: #8796ff; --trt-soft: rgba(135,150,255,.18); --ref: #6b7180;
+  --good: #5cc98f; --good-bg: rgba(92,201,143,.14); --warn: #e9b450; --warn-bg: rgba(233,180,80,.14); --bad: #ff7b6e; --bad-bg: rgba(255,123,110,.14);
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12141a; --surface: #1b1e26; --raised: #242833; --fg: #e8eaf0; --muted: #9aa0ad; --line: #2e3240;
+  --trt: #8796ff; --trt-soft: rgba(135,150,255,.18); --ref: #6b7180;
+  --good: #5cc98f; --good-bg: rgba(92,201,143,.14); --warn: #e9b450; --warn-bg: rgba(233,180,80,.14); --bad: #ff7b6e; --bad-bg: rgba(255,123,110,.14);
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body); margin: 0; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 56px; display: grid; gap: 26px; }
+h1, h2 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(28px, 4.6vw, 40px); font-weight: 700; line-height: 1.1; }
+h2 { font-size: 21px; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font: 500 12px/1.2 var(--f-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+section { display: grid; gap: 14px; min-width: 0; }
+.sec-head { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: end; justify-content: space-between; }
+.sec-head > div:not(.seg) { display: grid; gap: 4px; min-width: 0; }
+.sec-head p { color: var(--muted); max-width: 68ch; }
+
+header { display: grid; gap: 14px; }
+.head-row { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-end; justify-content: space-between; }
+.head-row > div { min-width: 0; display: grid; gap: 8px; }
+.sim { font-size: 13px; color: var(--warn); background: var(--warn-bg); padding: 6px 10px; border-radius: 6px; width: fit-content; }
+.verdict { justify-items: end; }
+.pill { font: 700 15px/1 var(--f-display); letter-spacing: .08em; padding: 9px 14px; border-radius: 999px; color: var(--good); background: var(--good-bg); border: 1px solid var(--good); }
+.design { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+.design b { color: var(--fg); font-weight: 600; }
+
+.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); margin-inline: -20px; padding: 12px 20px; display: grid; gap: 10px; }
+.frow { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
+.fgroup { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.fgroup > .eyebrow { margin-right: 4px; }
+.seg { display: inline-flex; background: var(--raised); border-radius: 8px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button { font: 500 13px/1 var(--f-body); color: var(--muted); background: transparent; border: 0; border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+.seg button:hover { color: var(--fg); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12); font-weight: 600; }
+button:focus-visible, input:focus-visible, g:focus-visible { outline: 2px solid var(--trt); outline-offset: 2px; }
+.reset { font: 500 13px/1 var(--f-body); color: var(--trt); background: none; border: 0; cursor: pointer; padding: 6px 4px; text-decoration: underline; text-underline-offset: 3px; }
+.banner { font-size: 13px; padding: 8px 12px; border-radius: 8px; background: var(--raised); color: var(--fg); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.banner.warn { background: var(--warn-bg); color: var(--warn); }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 6px; align-content: start; }
+.kpi.lead { border-color: var(--trt); }
+.kpi .big { font: 600 30px/1.05 var(--f-display); font-variant-numeric: tabular-nums; }
+.kpi.lead .big { color: var(--trt); }
+.kpi .sub { font-size: 13px; color: var(--muted); }
+
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; position: relative; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+#score { min-width: 780px; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+th { font: 500 11px/1.2 var(--f-mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.r { text-align: right; }
+#score td.num, #score td.r { white-space: nowrap; }
+.group td { font: 600 12px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); background: var(--bg); padding-block: 8px; }
+.status { font: 600 12px/1 var(--f-body); padding: 5px 8px; border-radius: 5px; white-space: nowrap; }
+.status.good { color: var(--good); background: var(--good-bg); }
+.status.warn { color: var(--warn); background: var(--warn-bg); }
+.status.bad { color: var(--bad); background: var(--bad-bg); }
+.status.neutral { color: var(--muted); background: var(--raised); }
+.cibar { width: 240px; height: 24px; display: block; cursor: crosshair; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; min-width: 0; position: relative; }
+.chart svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.two { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px; }
+.ax { fill: var(--muted); font: 11px var(--f-mono); }
+.grid { stroke: var(--line); }
+.zero { stroke: var(--muted); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font: 12px/1.45 var(--f-mono); padding: 7px 9px; border-radius: 6px;
+  white-space: nowrap; z-index: 10; transform: translate(-50%, calc(-100% - 10px)); }
+.frow-click { cursor: pointer; }
+.frow-click:hover rect.hit { fill: var(--raised); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+.calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 16px; }
+.controls { display: grid; gap: 14px; align-content: start; }
+.ctl { display: grid; gap: 6px; }
+.ctl label { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.ctl label b { color: var(--fg); font-family: var(--f-mono); font-weight: 500; }
+input[type=range] { width: 100%; accent-color: var(--trt); }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.check input { accent-color: var(--trt); width: 16px; height: 16px; }
+.answer { font: 600 34px/1 var(--f-display); color: var(--trt); font-variant-numeric: tabular-nums; }
+
+.notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; font-size: 14px; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+@media (max-width: 880px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .two, .calc, .notes { grid-template-columns: 1fr; }
+  .verdict { justify-items: start; }
+}
+@media (max-width: 700px) { .filters { position: static; } }
+@media (max-width: 420px) { .kpis { grid-template-columns: 1fr; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="head-row">
+      <div>
+        <span class="eyebrow">Experiment readout · homepage</span>
+        <h1>Personalized artwork vs default artwork</h1>
+        <span class="sim">Simulated data for a portfolio project. Not real Netflix data or results.</span>
+      </div>
+      <div class="verdict" style="display:grid;gap:4px">
+        <span class="eyebrow">Decision (all members)</span>
+        <span class="pill">SHIP</span>
+      </div>
+    </div>
+    <div class="design">
+      <span><b>Unit</b> member account, 50/50</span>
+      <span><b>Duration</b> 28 days</span>
+      <span><b>Members</b> <span class="num">80,000</span></span>
+      <span><b>Primary</b> streaming hours per member</span>
+      <span><b>α</b> 0.05, two-sided</span>
+    </div>
+  </header>
+
+  <div class="filters" role="region" aria-label="Filters">
+    <div class="frow">
+      <div class="fgroup"><span class="eyebrow">Tenure</span><div class="seg" data-dim="tenure"></div></div>
+      <div class="fgroup"><span class="eyebrow">Device</span><div class="seg" data-dim="device"></div></div>
+      <div class="fgroup"><span class="eyebrow">Region</span><div class="seg" data-dim="region"></div></div>
+    </div>
+    <div class="frow">
+      <div class="fgroup"><span class="eyebrow">Estimate</span><div class="seg" data-dim="method"></div></div>
+      <button class="reset" id="reset" type="button" hidden>Reset filters</button>
+    </div>
+    <div class="banner" id="banner"></div>
+  </div>
+
+  <section><div class="kpis" id="kpis"></div></section>
+
+  <section>
+    <div class="sec-head"><div>
+      <h2>Metric scorecard</h2>
+      <p>Hover a bar for exact numbers. Bars show the 95% CI for the relative change; red dashes mark guardrail margins.</p>
+    </div></div>
+    <div class="table-wrap"><table id="score"></table><div class="tip" hidden></div></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div>
+        <h2>Does the lift last?</h2>
+        <p id="time-desc"></p>
+      </div>
+      <div class="seg" data-dim="series"></div>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="legend"><span><i style="background:var(--trt)"></i><span id="leg-sel">All members</span></span><span id="leg-ref" hidden><i style="background:var(--ref)"></i>All members (reference)</span></div>
+        <div class="chart" id="timeline"></div>
+        <div class="tip" hidden></div>
+      </div>
+      <div class="panel" style="align-content:start">
+        <span class="eyebrow">Weekly lift</span>
+        <table id="weekly"></table>
+        <p class="small muted" id="weekly-note"></p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><div>
+      <h2>Lift by segment</h2>
+      <p>Click a row to filter the whole dashboard to that segment. Only the tenure split was planned in advance; device and region cuts are exploratory.</p>
+    </div></div>
+    <div class="panel"><div class="chart" id="forest"></div><div class="tip" hidden></div></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><div>
+      <h2>How many members does a test like this need?</h2>
+      <p>The smallest lift a test can reliably detect (MDE) depends on sample size, significance level, power and variance reduction. Viewing hours vary a lot between members, so tests need large samples.</p>
+    </div></div>
+    <div class="panel calc">
+      <div class="controls">
+        <div class="ctl"><label for="n">Members per arm <b id="n-out"></b></label><input id="n" type="range" min="2000" max="150000" step="1000" value="40000"></div>
+        <div class="ctl"><label for="alpha">Significance level (α) <b id="alpha-out"></b></label><input id="alpha" type="range" min="0" max="2" step="1" value="1"></div>
+        <div class="ctl"><label for="pw">Power <b id="pw-out"></b></label><input id="pw" type="range" min="0" max="2" step="1" value="0"></div>
+        <label class="check"><input id="cuped" type="checkbox" checked> Use CUPED (pre-period viewing, r ≈ <span id="rho"></span>)</label>
+        <div style="display:grid;gap:4px">
+          <span class="eyebrow">Minimum detectable lift</span>
+          <span class="answer" id="mde"></span>
+          <span class="small muted" id="mde-note"></span>
+        </div>
+      </div>
+      <div><div class="chart" id="mdechart"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><div><h2>Recommendation and caveats</h2></div></div>
+    <div class="panel notes">
+      <div><span class="eyebrow">Recommend</span>
+        <ul>
+          <li>Ship personalized artwork. Streaming hours and play starts both rose significantly across all members.</li>
+          <li>Forecast with the week-4 lift, not the 28-day average, because part of the early lift was novelty among tenured members.</li>
+          <li>Prioritise new members, whose lift is the largest and doesn't fade.</li>
+          <li>Ask engineering to recover the extra homepage load time, for example by pre-fetching artwork.</li>
+          <li>The playback-error blip (p ≈ 0.04) is a chance result inside its margin. Artwork doesn't touch the video player.</li>
+        </ul></div>
+      <div><span class="eyebrow">Limitations</span>
+        <ul>
+          <li>All data is simulated with assumed effect sizes, so the numbers show the method, not a real Netflix outcome.</li>
+          <li>28 days is too short to measure retention. A long-term holdout of about 5% of members would settle it.</li>
+          <li>Members share household profiles, so randomising by account may leak effects between viewers.</li>
+          <li>Filtered views are exploratory. With 60 possible filter combinations, some will look significant by chance.</li>
+        </ul></div>
+    </div>
+  </section>
+
+  <footer>Analysis: Python (pandas, SciPy, statsmodels). Methods: Welch t-test, delta method, CUPED, non-inferiority guardrails, sample-ratio-mismatch check. Time series use all assigned members (intent-to-treat), counting zero viewing after cancellation.</footer>
+</div>
+
+<script>
+const D = __DATA__;
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+const pct = (x, d = 2) => (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(d) + "%";
+const fmtP = p => p < 0.0001 ? "<0.0001" : p < 0.01 ? p.toFixed(4) : p.toFixed(3);
+const fmtN = n => n.toLocaleString("en-US");
+const LABEL = { all: "All", new: "New", tenured: "Tenured", tv: "TV", mobile: "Mobile", web: "Web", APAC: "APAC", EMEA: "EMEA", NA: "N. America", LATAM: "LATAM",
+  cuped: "CUPED", unadj: "Unadjusted", daily: "Daily", cumul: "Cumulative" };
+const OPTS = { tenure: ["all", "new", "tenured"], device: ["all", "tv", "mobile", "web"], region: ["all", "APAC", "EMEA", "NA", "LATAM"], method: ["cuped", "unadj"], series: ["cumul", "daily"] };
+const state = { tenure: "all", device: "all", region: "all", method: "cuped", series: "cumul" };
+try { const s = JSON.parse(localStorage.getItem("abdash") || "{}"); for (const k in s) if (OPTS[k] && OPTS[k].includes(s[k])) state[k] = s[k]; } catch (e) {}
+
+const key = () => `${state.tenure}|${state.device}|${state.region}`;
+const isFiltered = () => key() !== "all|all|all";
+const sig = r => r.p < 0.05;
+
+function tipper(container) {
+  const tip = container.querySelector(".tip");
+  return {
+    show(html, evt) {
+      const box = container.getBoundingClientRect();
+      tip.innerHTML = html; tip.hidden = false;
+      let x = evt.clientX - box.left + container.scrollLeft;
+      const w = tip.offsetWidth / 2; x = Math.max(w + 4, Math.min(container.scrollWidth - w - 4, x));
+      tip.style.left = x + "px"; tip.style.top = (evt.clientY - box.top) + "px";
+    },
+    hide() { tip.hidden = true; }
+  };
+}
+
+document.querySelectorAll(".seg[data-dim]").forEach(seg => {
+  const dim = seg.dataset.dim;
+  seg.setAttribute("role", "group");
+  OPTS[dim].forEach(v => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = LABEL[v]; b.dataset.v = v;
+    b.addEventListener("click", () => { state[dim] = v; render(); });
+    seg.append(b);
+  });
+});
+$("reset").addEventListener("click", () => { state.tenure = state.device = state.region = "all"; render(); });
+
+function syncControls() {
+  document.querySelectorAll(".seg[data-dim]").forEach(seg => seg.querySelectorAll("button").forEach(b =>
+    b.setAttribute("aria-pressed", String(state[seg.dataset.dim] === b.dataset.v))));
+  $("reset").hidden = !isFiltered();
+  try { localStorage.setItem("abdash", JSON.stringify(state)); } catch (e) {}
+}
+
+function selName() {
+  const parts = ["tenure", "device", "region"].filter(d => state[d] !== "all").map(d => d === "tenure" ? `${LABEL[state[d]]} members` : LABEL[state[d]]);
+  return parts.length ? parts.join(" · ") : "All members";
+}
+
+function renderKpis(R) {
+  const m = R[state.method], wk4 = R.weekly[3];
+  const k = [
+    { lab: "Streaming hours, 28-day lift", big: pct(m.lift), lead: true, sub: `95% CI ${pct(m.lo)} to ${pct(m.hi)} · ${LABEL[state.method]} · p ${fmtP(m.p)}` },
+    { lab: "Week-4 lift", big: pct(wk4.lift), sub: `CI ${pct(wk4.lo)} to ${pct(wk4.hi)}. Use this for forecasts, after any novelty fades.` },
+    { lab: "Play-start rate", big: (R.play.pp >= 0 ? "+" : "−") + Math.abs(R.play.pp).toFixed(2) + " pp", sub: `${(R.play.ctrl * 100).toFixed(1)}% → ${(R.play.trt * 100).toFixed(1)}% of homepage sessions` },
+    { lab: "28-day cancellation", big: pct(R.cancel.lift, 1), sub: `${sig(R.cancel) ? "Significant" : "Inconclusive"} · CI ${pct(R.cancel.lo, 1)} to ${pct(R.cancel.hi, 1)}` },
+  ];
+  $("kpis").innerHTML = k.map(x => `<div class="kpi${x.lead ? " lead" : ""}"><span class="eyebrow">${x.lab}</span><span class="big">${x.big}</span><span class="sub">${x.sub}</span></div>`).join("");
+}
+
+function renderBanner(R) {
+  const b = $("banner"), n = R.n_t + R.n_c, small = R.n_t < 2000;
+  b.className = "banner" + (small ? " warn" : "");
+  const srm = R.srm_p < 0.001 ? `<span>Sample ratio mismatch (p ${fmtP(R.srm_p)}).</span>` : "";
+  b.innerHTML = isFiltered()
+    ? `<b>${selName()}</b><span>${fmtN(n)} members (${fmtN(R.n_c)} control / ${fmtN(R.n_t)} treatment).</span><span>Exploratory view: the ship decision uses all members.</span>${small ? "<span>Small sample: expect wide intervals.</span>" : ""}${srm}`
+    : `<b>All members</b><span>${fmtN(n)} members (${fmtN(R.n_c)} control / ${fmtN(R.n_t)} treatment). Sample ratio check passes (p ${R.srm_p.toFixed(3)}).</span>`;
+}
+
+const CI_MIN = -0.25, CI_MAX = 0.25;
+function ciBar(r, margin) {
+  const W = 240, H = 24, x = v => 6 + (Math.max(CI_MIN, Math.min(CI_MAX, v)) - CI_MIN) / (CI_MAX - CI_MIN) * (W - 12);
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "cibar" });
+  s.append(el("line", { x1: x(0), x2: x(0), y1: 2, y2: H - 2, class: "zero" }));
+  if (margin != null) s.append(el("line", { x1: x(margin), x2: x(margin), y1: 2, y2: H - 2, stroke: "var(--bad)", "stroke-dasharray": "3 2" }));
+  s.append(el("rect", { x: x(r.lo), y: 9, width: Math.max(2, x(r.hi) - x(r.lo)), height: 6, rx: 3, fill: "var(--trt-soft)", stroke: "var(--trt)" }));
+  s.append(el("circle", { cx: x(r.lift), cy: 12, r: 4, fill: "var(--trt)" }));
+  return s.outerHTML;
+}
+function renderScore(R) {
+  const m = R[state.method], e = R.errors, L = R.load;
+  const st = (r, kind) => {
+    if (kind === "guard") return r.pass ? (sig(r) && r.lift > 0 ? ["warn", "Worse, within margin"] : ["good", "Within margin"]) : ["bad", "Margin breached"];
+    if (!sig(r)) return ["neutral", "Inconclusive"];
+    const good = kind === "lower" ? r.lift < 0 : r.lift > 0;
+    return good ? ["good", "Significant win"] : ["bad", "Significant loss"];
+  };
+  const rows = [
+    ["g", "Primary"],
+    { name: `Streaming hours / member (${LABEL[state.method]})`, c: m.ctrl.toFixed(2) + " h", t: m.trt.toFixed(2) + " h", ch: pct(m.lift), r: m, s: st(m) },
+    ["g", "Secondary"],
+    { name: "Play-start rate", c: (R.play.ctrl * 100).toFixed(2) + "%", t: (R.play.trt * 100).toFixed(2) + "%", ch: pct(R.play.lift), r: R.play, s: st(R.play) },
+    { name: "28-day cancellation", c: (R.cancel.ctrl * 100).toFixed(2) + "%", t: (R.cancel.trt * 100).toFixed(2) + "%", ch: pct(R.cancel.lift), r: R.cancel, s: st(R.cancel, "lower") },
+    ["g", "Guardrails · non-inferiority"],
+    { name: "Playback error rate (margin +10%)", c: (e.ctrl * 100).toFixed(3) + "%", t: (e.trt * 100).toFixed(3) + "%", ch: pct(e.lift), r: e, s: st(e, "guard"), margin: e.margin,
+      extra: `one-sided upper bound ${pct(e.upper)} vs margin +10%` },
+    { name: "Homepage load time (margin +50 ms)", c: L.ctrl.toFixed(0) + " ms", t: L.trt.toFixed(0) + " ms", ch: (L.diff_ms >= 0 ? "+" : "−") + Math.abs(L.diff_ms).toFixed(1) + " ms", r: L, s: st(L, "guard"),
+      margin: L.margin_ms / L.ctrl, extra: `one-sided upper bound +${L.upper_ms.toFixed(1)} ms vs margin +50 ms` },
+  ];
+  const meta = [];
+  $("score").innerHTML = `<thead><tr><th>Metric</th><th class="r">Control</th><th class="r">Treatment</th><th class="r">Change</th><th>95% CI (−25% to +25%)</th><th class="r">p</th><th>Status</th></tr></thead><tbody>` +
+    rows.map(r => {
+      if (Array.isArray(r)) return `<tr class="group"><td colspan="7">${r[1]}</td></tr>`;
+      meta.push(r);
+      return `<tr><td>${r.name}</td><td class="r num">${r.c}</td><td class="r num">${r.t}</td><td class="r num">${r.ch}</td><td data-i="${meta.length - 1}">${ciBar(r.r, r.margin)}</td><td class="r num">${fmtP(r.r.p)}</td><td><span class="status ${r.s[0]}">${r.s[1]}</span></td></tr>`;
+    }).join("") + "</tbody>";
+  const tp = tipper($("score").parentElement);
+  $("score").querySelectorAll("td[data-i]").forEach(td => {
+    const r = meta[+td.dataset.i];
+    td.addEventListener("mousemove", ev => tp.show(`${r.name}<br>change ${pct(r.r.lift)}<br>95% CI ${pct(r.r.lo)} to ${pct(r.r.hi)}<br>p = ${fmtP(r.r.p)}${r.extra ? "<br>" + r.extra : ""}`, ev));
+    td.addEventListener("mouseleave", tp.hide);
+  });
+}
+
+function renderTimeline(R) {
+  const ser = R[state.series], ref = D.results["all|all|all"][state.series], showRef = isFiltered();
+  const W = 660, H = 320, m = { l: 52, r: 26, t: 12, b: 34 }, days = 28;
+  const vals = ser.flatMap(([l, s]) => [l - 1.96 * s, l + 1.96 * s]).concat(showRef ? ref.map(r => r[0]) : [], [0]);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const step = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5].find(s => (hi - lo) / s <= 7) || 1;
+  lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+  const x = d => m.l + (d - 1) / (days - 1) * (W - m.l - m.r);
+  const y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Lift over time" });
+  for (let i = 0; lo + i * step <= hi + 1e-9; i++) {
+    const v = lo + i * step;
+    s.append(el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: Math.abs(v) < 1e-9 ? "zero" : "grid" }));
+    s.append(el("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end", class: "ax" }, (v > 1e-9 ? "+" : v < -1e-9 ? "−" : "") + Math.abs(Math.round(v * 100)) + "%"));
+  }
+  [1, 7, 14, 21, 28].forEach(d => s.append(el("text", { x: x(d), y: H - 12, "text-anchor": "middle", class: "ax" }, "day " + d)));
+  const up = ser.map(([l, se], i) => `${x(i + 1)},${y(l + 1.96 * se)}`), dn = ser.map(([l, se], i) => `${x(i + 1)},${y(l - 1.96 * se)}`).reverse();
+  s.append(el("polygon", { points: up.concat(dn).join(" "), fill: "var(--trt-soft)" }));
+  if (showRef) s.append(el("polyline", { points: ref.map(([l], i) => `${x(i + 1)},${y(l)}`).join(" "), fill: "none", stroke: "var(--ref)", "stroke-width": 1.5, "stroke-dasharray": "4 3" }));
+  s.append(el("polyline", { points: ser.map(([l], i) => `${x(i + 1)},${y(l)}`).join(" "), fill: "none", stroke: "var(--trt)", "stroke-width": 2, "stroke-linejoin": "round" }));
+  s.append(el("circle", { cx: x(days), cy: y(ser[days - 1][0]), r: 4, fill: "var(--trt)" }));
+  const cross = el("line", { y1: m.t, y2: H - m.b, stroke: "var(--muted)", "stroke-width": 1, visibility: "hidden" });
+  const dot = el("circle", { r: 4.5, fill: "var(--surface)", stroke: "var(--trt)", "stroke-width": 2, visibility: "hidden" });
+  const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" });
+  s.append(cross, dot, hit);
+  const host = $("timeline"); host.replaceChildren(s);
+  const tp = tipper(host.parentElement);
+  const move = ev => {
+    const pt = s.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+    const p = pt.matrixTransform(s.getScreenCTM().inverse());
+    const d = Math.max(1, Math.min(days, Math.round((p.x - m.l) / (W - m.l - m.r) * (days - 1) + 1)));
+    const [l, se] = ser[d - 1];
+    cross.setAttribute("x1", x(d)); cross.setAttribute("x2", x(d)); cross.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", x(d)); dot.setAttribute("cy", y(l)); dot.setAttribute("visibility", "visible");
+    tp.show(`${state.series === "cumul" ? "Days 1–" + d : "Day " + d}<br>lift ${pct(l)}<br>95% CI ${pct(l - 1.96 * se)} to ${pct(l + 1.96 * se)}${showRef ? "<br>all members " + pct(ref[d - 1][0]) : ""}`, ev);
+  };
+  hit.addEventListener("mousemove", move);
+  hit.addEventListener("touchstart", e => move(e.touches[0]), { passive: true });
+  hit.addEventListener("mouseleave", () => { tp.hide(); cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); });
+  $("leg-sel").textContent = selName(); $("leg-ref").hidden = !showRef;
+  $("time-desc").textContent = state.series === "cumul"
+    ? "Cumulative lift: the result you'd have reported if you'd stopped the test on that day. It moves a lot early on, which is why tests run for their planned length."
+    : "Daily lift in streaming hours with 95% bands. A falling line means a novelty effect: the change drew extra viewing at first, then settled.";
+  const w = R.weekly;
+  $("weekly").innerHTML = `<thead><tr><th>Week</th><th class="r">Lift</th><th class="r">95% CI</th></tr></thead><tbody>` +
+    w.map((r, i) => `<tr><td>Week ${i + 1}</td><td class="r num">${pct(r.lift)}</td><td class="r num">${pct(r.lo, 1)} to ${pct(r.hi, 1)}</td></tr>`).join("") + "</tbody>";
+  const drop = w[0].lift - w[3].lift;
+  $("weekly-note").textContent = drop > 0.01
+    ? `Lift fell from ${pct(w[0].lift)} in week 1 to ${pct(w[3].lift)} in week 4, which points to a novelty effect. Week 4 is the better guide to the lasting impact.`
+    : `Lift is fairly stable from week 1 (${pct(w[0].lift)}) to week 4 (${pct(w[3].lift)}), so there's no strong sign of novelty in this group.`;
+}
+
+function renderForest() {
+  const rows = D.forest, W = 980, rowH = 32, m = { l: 190, r: 150, t: 8, b: 30 };
+  const H = m.t + m.b + rows.length * rowH;
+  const vals = rows.flatMap(r => [r[state.method].lo, r[state.method].hi]);
+  const xmin = Math.min(-0.01, Math.floor(Math.min(...vals) * 50) / 50), xmax = Math.ceil(Math.max(...vals) * 50) / 50;
+  const x = v => m.l + (v - xmin) / (xmax - xmin) * (W - m.l - m.r);
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Lift by segment" });
+  const host = $("forest"), tp = tipper(host.parentElement);
+  for (let i = 0; Math.ceil(xmin * 50) / 50 + i * 0.02 <= xmax + 1e-9; i++) {
+    const v = Math.ceil(xmin * 50) / 50 + i * 0.02;
+    s.append(el("line", { x1: x(v), x2: x(v), y1: m.t, y2: H - m.b, class: Math.abs(v) < 1e-9 ? "zero" : "grid" }));
+    s.append(el("text", { x: x(v), y: H - 10, "text-anchor": "middle", class: "ax" }, (v > 1e-9 ? "+" : v < -1e-9 ? "−" : "") + Math.abs(Math.round(v * 100)) + "%"));
+  }
+  rows.forEach((r, i) => {
+    const cy = m.t + i * rowH + rowH / 2;
+    const sel = state[r.dim] === r.seg && ["tenure", "device", "region"].filter(d => d !== r.dim).every(d => state[d] === "all");
+    if (i > 0 && rows[i - 1].dim !== r.dim) s.append(el("line", { x1: 0, x2: W, y1: cy - rowH / 2, y2: cy - rowH / 2, class: "grid" }));
+    const g = el("g", { class: "frow-click", tabindex: 0, role: "button", "aria-label": `Filter to ${LABEL[r.seg]}` });
+    const v = r[state.method];
+    g.append(el("rect", { class: "hit", x: 0, y: cy - rowH / 2 + 1, width: W, height: rowH - 2, fill: sel ? "var(--trt-soft)" : "transparent", rx: 4, "fill-opacity": sel ? 1 : 0.6 }));
+    g.append(el("text", { x: 8, y: cy + 4, class: "ax" }, r.dim[0].toUpperCase() + r.dim.slice(1)));
+    g.append(el("text", { x: 78, y: cy + 4, style: "font: 13px var(--f-body)", fill: "var(--fg)" }, LABEL[r.seg]));
+    g.append(el("line", { x1: x(v.lo), x2: x(v.hi), y1: cy, y2: cy, stroke: "var(--trt)", "stroke-width": 2 }));
+    g.append(el("circle", { cx: x(v.lift), cy, r: 4.5, fill: "var(--trt)" }));
+    g.append(el("text", { x: W - 8, y: cy + 4, "text-anchor": "end", class: "ax" }, `${pct(v.lift, 1)}  n=${fmtN(r.n)}`));
+    const go = () => { state.tenure = state.device = state.region = "all"; state[r.dim] = r.seg; render(); };
+    g.addEventListener("click", go);
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    g.addEventListener("mousemove", ev => tp.show(`${LABEL[r.seg]} (${r.dim})<br>lift ${pct(v.lift)}<br>95% CI ${pct(v.lo)} to ${pct(v.hi)}<br>n = ${fmtN(r.n)} · click to filter`, ev));
+    g.addEventListener("mouseleave", () => tp.hide());
+    s.append(g);
+  });
+  const all = D.results["all|all|all"][state.method];
+  s.append(el("line", { x1: x(all.lift), x2: x(all.lift), y1: m.t, y2: H - m.b, stroke: "var(--trt)", "stroke-dasharray": "4 3", "pointer-events": "none" }));
+  host.replaceChildren(s);
+}
+
+const ALPHAS = [[0.01, 2.5758], [0.05, 1.96], [0.10, 1.6449]], POWERS = [[0.8, 0.8416], [0.9, 1.2816], [0.95, 1.6449]];
+$("rho").textContent = D.power.rho.toFixed(2);
+function mdeFor(n, za, zb, cuped) {
+  const sd = D.power.sd * (cuped ? Math.sqrt(1 - D.power.rho ** 2) : 1);
+  return (za + zb) * sd * Math.sqrt(2 / n) / D.power.mean;
+}
+function renderCalc() {
+  const n = +$("n").value, [a, za] = ALPHAS[+$("alpha").value], [p, zb] = POWERS[+$("pw").value], cu = $("cuped").checked;
+  $("n-out").textContent = fmtN(n); $("alpha-out").textContent = a.toFixed(2); $("pw-out").textContent = Math.round(p * 100) + "%";
+  const mde = mdeFor(n, za, zb, cu), other = mdeFor(n, za, zb, !cu);
+  $("mde").textContent = (mde * 100).toFixed(2) + "%";
+  const obs = D.results["all|all|all"].cuped.lift;
+  $("mde-note").textContent = `${cu ? "Without" : "With"} CUPED it would be ${(other * 100).toFixed(2)}%. ` +
+    (Math.abs(obs) >= mde ? `This test's observed lift (${pct(obs)}) is larger, so a test this size would usually detect it.` : `This test's observed lift (${pct(obs)}) is smaller, so a test this size would often miss it.`);
+  const W = 560, H = 280, m = { l: 48, r: 16, t: 30, b: 40 }, nmin = 2000, nmax = 150000;
+  const ymax = Math.ceil(mdeFor(nmin, 2.5758, 1.6449, false) * 20) / 20;
+  const x = v => m.l + (v - nmin) / (nmax - nmin) * (W - m.l - m.r), y = v => m.t + (1 - Math.min(v, ymax) / ymax) * (H - m.t - m.b);
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Minimum detectable lift by sample size" });
+  const stepY = ymax > 0.2 ? 0.05 : 0.02;
+  for (let i = 0; i * stepY <= ymax + 1e-9; i++) { const v = i * stepY; s.append(el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: v === 0 ? "zero" : "grid" })); s.append(el("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end", class: "ax" }, Math.round(v * 100) + "%")); }
+  [2000, 40000, 80000, 120000, 150000].forEach(v => s.append(el("text", { x: x(v), y: H - 22, "text-anchor": "middle", class: "ax" }, v / 1000 + "k")));
+  s.append(el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle", class: "ax" }, "members per arm"));
+  const curve = c => Array.from({ length: 90 }, (_, i) => { const v = nmin + (nmax - nmin) * i / 89; return `${x(v)},${y(mdeFor(v, za, zb, c))}`; }).join(" ");
+  s.append(el("polyline", { points: curve(!cu), fill: "none", stroke: "var(--ref)", "stroke-width": 1.5, "stroke-dasharray": "4 3" }));
+  s.append(el("polyline", { points: curve(cu), fill: "none", stroke: "var(--trt)", "stroke-width": 2 }));
+  s.append(el("line", { x1: m.l, x2: W - m.r, y1: y(Math.abs(obs)), y2: y(Math.abs(obs)), stroke: "var(--good)", "stroke-dasharray": "2 3" }));
+  s.append(el("text", { x: W - m.r, y: y(Math.abs(obs)) - 5, "text-anchor": "end", class: "ax", style: "fill: var(--good)" }, "observed lift " + pct(obs)));
+  s.append(el("line", { x1: x(n), x2: x(n), y1: m.t, y2: H - m.b, stroke: "var(--muted)" }));
+  s.append(el("circle", { cx: x(n), cy: y(mde), r: 5, fill: "var(--trt)" }));
+  s.append(el("line", { x1: m.l, x2: m.l + 20, y1: 10, y2: 10, stroke: "var(--trt)", "stroke-width": 2 }), el("text", { x: m.l + 26, y: 14, class: "ax" }, cu ? "with CUPED" : "without CUPED"),
+    el("line", { x1: m.l + 140, x2: m.l + 160, y1: 10, y2: 10, stroke: "var(--ref)", "stroke-dasharray": "4 3" }), el("text", { x: m.l + 166, y: 14, class: "ax" }, cu ? "without CUPED" : "with CUPED"));
+  $("mdechart").replaceChildren(s);
+}
+["n", "alpha", "pw", "cuped"].forEach(id => $(id).addEventListener("input", renderCalc));
+
+function render() {
+  const R = D.results[key()];
+  syncControls(); renderBanner(R); renderKpis(R); renderScore(R); renderTimeline(R); renderForest();
+}
+render(); renderCalc();
+</script>
